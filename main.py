@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from transformers import AlbertTokenizer, AlbertModel
 import torch
 import torch.nn as nn
-
+from pydantic import BaseModel
 # Define the TenseClassifier class
 class TenseClassifier(nn.Module):
     def __init__(self, Albert_model, num_classes):
@@ -34,6 +34,9 @@ model.load_state_dict(torch.load('./AlBert_tense_classifier_model.pth', map_loca
 model.eval()
 
 # Define the tense labels
+
+class SentenceInput(BaseModel):
+    sentence: str
 tense_labels = {
     'present': 0,
     'future': 1,
@@ -54,8 +57,9 @@ def root_path():
     return {"message": "Hello World!!"}
 
 @app.post("/predict")
-def predict_tense(sentence: str):
+def predict_tense(input_data: SentenceInput):
     # Check if the sentence is valid
+    sentence = input_data.sentence
     if not sentence:
         raise HTTPException(status_code=400, detail="Sentence is required")
 
@@ -71,6 +75,6 @@ def predict_tense(sentence: str):
         # Convert predicted label back to tense
         predicted_tense = [k for k, v in tense_labels.items() if v == predicted_label][0]
 
-        return {"predicted_tense": predicted_tense}
+        return {"sentence": sentence, "prediction": predicted_tense}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
